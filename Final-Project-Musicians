@@ -1,0 +1,441 @@
+#include <stdlib.h>
+#include <iostream>
+#include <mysql_connection.h>
+#include <cppconn/driver.h>
+#include <cppconn/exception.h>
+#include <cppconn/resultset.h>
+#include <cppconn/statement.h>
+#include <cppconn/prepared_statement.h>
+
+
+using namespace std;
+
+
+sql::Driver *driver;
+sql::Connection *con;
+sql::Statement *stmt;
+sql::ResultSet *res;
+sql::PreparedStatement *prep_stmt;
+
+
+void findall();
+void findbyid();
+void insert();
+void findbygenre();
+void deleteArtist();
+void updateArtist();
+void createViewAverageAge();
+void countArtistsYoungerThan50();
+
+
+int main(void)
+{
+    try
+    {
+        /* Create a connection */
+        driver = get_driver_instance();
+        con = driver->connect("tcp://127.0.0.1:3306", "root", "");
+
+
+        /* Connect to the MySQL musicians database */
+        con->setSchema("musicians");
+
+
+        int option = 0;
+
+
+        while (option != 9)
+        {
+            cout << endl;
+            cout << "1. Add a musician" << endl;
+            cout << "2. Find a musician by id" << endl;
+            cout << "3. Find a musician by genre" << endl;
+            cout << "4. Show all musicians" << endl;
+            cout << "5. Delete a musician" << endl;
+            cout << "6. Update artist information" << endl;
+            cout << "7. Create view for average age" << endl;
+            cout << "8. Create view for Count for artists" << endl;
+            cout << "9. Exit" << endl
+                 << endl;
+
+
+            cout << "Choice : ";
+            cin >> option;
+
+
+            switch (option)
+            {
+            case 1:
+                insert();
+                break;
+
+
+            case 2:
+                findbyid();
+                break;
+
+
+            case 3:
+                findbygenre();
+                break;
+
+
+            case 4:
+                findall();
+                break;
+
+
+            case 5:
+                deleteArtist();
+                break;
+
+
+            case 6:
+                updateArtist();
+                break;
+
+
+            case 7:
+                createViewAverageAge();
+                break;
+
+
+            case 8:
+                countArtistsYoungerThan50();
+                break;
+
+
+            case 9:
+                break;
+            }
+        }
+
+
+        delete res;
+        delete stmt;
+        delete con;
+    }
+    catch (sql::SQLException &e)
+    {
+        cout << "# ERR: SQLException in " << __FILE__;
+        cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
+        cout << "# ERR: " << e.what();
+        cout << " (MySQL error code: " << e.getErrorCode();
+        cout << ", SQLState: " << e.getSQLState() << " )" << endl;
+    }
+    cout << endl;
+    return EXIT_SUCCESS;
+}
+
+
+void findall()
+{
+    stmt = con->createStatement();
+    res = stmt->executeQuery("SELECT * FROM Artists");
+
+
+    while (res->next())
+    {
+        cout << res->getInt("artistID") << " ";
+        cout << res->getString("stage_name") << " ";
+        cout << res->getString("real_name") << " ";
+        cout << res->getString("age") << " ";
+        cout << res->getString("genre") << " ";
+        cout << res->getString("hometown") << " ";
+        cout << res->getInt("rclabel_id") << " ";
+        cout << res->getInt("homeven_id") << endl;
+    }
+}
+
+
+void findbyid()
+{
+    int id;
+
+
+    cout << "Enter the artist ID: ";
+    cin >> id;
+
+
+    prep_stmt = con->prepareStatement("SELECT * FROM Artists WHERE artistID = ?");
+    prep_stmt->setInt(1, id);
+    res = prep_stmt->executeQuery();
+
+
+    while (res->next())
+    {
+        cout << res->getInt("artistID") << " ";
+        cout << res->getString("stage_name") << " ";
+        cout << res->getString("real_name") << " ";
+        cout << res->getString("age") << " ";
+        cout << res->getString("genre") << " ";
+        cout << res->getString("hometown") << " ";
+        cout << res->getInt("rclabel_id") << " ";
+        cout << res->getInt("homeven_id") << endl;
+    }
+}
+
+
+void insert()
+{
+    string artistID, stage_name, real_name, age, genre, hometown;
+    int rclabel_id, homeven_id;
+
+
+    cout << "Artist ID: ";
+    cin >> artistID;
+    cout << "Stage Name: ";
+    cin >> stage_name;
+    cout << "Real Name: ";
+    cin >> real_name;
+    cout << "Age: ";
+    cin >> age;
+    cout << "Genre: ";
+    cin >> genre;
+    cout << "Hometown: ";
+    cin >> hometown;
+    cout << "Record Label ID: ";
+    cin >> rclabel_id;
+
+
+    // Check if the provided rclabel_id exists in the Record_Label table
+    prep_stmt = con->prepareStatement("SELECT COUNT(*) FROM Record_Label WHERE rclabel_id = ?");
+    prep_stmt->setInt(1, rclabel_id);
+    res = prep_stmt->executeQuery();
+    res->next();
+    int labelCount = res->getInt(1);
+
+
+    if (labelCount == 0)
+    {
+        cout << "Record Label ID does not exist in the Record_Label table. Do you want to add it? (y/n): ";
+        char choice;
+        cin >> choice;
+
+
+        if (choice == 'y' || choice == 'Y')
+        {
+            // Insert the new record label
+            // Assume the user provides the necessary information for the new record label
+            // For simplicity, let's assume the user provides all required fields
+            string rclabel_name, founder_name, located;
+            int founded_year;
+            cout << "Record Label Name: ";
+            cin.ignore(); // Clear the input buffer
+            getline(cin, rclabel_name);
+            cout << "Founder Name: ";
+            getline(cin, founder_name);
+            cout << "Founded Year: ";
+            cin >> founded_year;
+            cout << "Located: ";
+            cin.ignore(); // Clear the input buffer
+            getline(cin, located);
+
+
+            prep_stmt = con->prepareStatement("INSERT INTO Record_Label (rclabel_id, rclabel, founder, founded, located) VALUES (?, ?, ?, ?, ?)");
+            prep_stmt->setInt(1, rclabel_id);
+            prep_stmt->setString(2, rclabel_name);
+            prep_stmt->setString(3, founder_name);
+            prep_stmt->setInt(4, founded_year);
+            prep_stmt->setString(5, located);
+
+
+            prep_stmt->execute();
+        }
+        else
+        {
+            cout << "Insertion canceled." << endl;
+            return;
+        }
+    }
+
+
+    cout << "Venue ID: ";
+    cin >> homeven_id;
+
+
+    // Check if the provided homeven_id exists in the Venues table
+    prep_stmt = con->prepareStatement("SELECT COUNT(*) FROM Venues WHERE homeven_id = ?");
+    prep_stmt->setInt(1, homeven_id);
+    res = prep_stmt->executeQuery();
+    res->next();
+    int venueCount = res->getInt(1);
+
+
+    if (venueCount == 0)
+    {
+        cout << "Venue ID does not exist in the Venues table. Do you want to add it? (y/n): ";
+        char choice;
+        cin >> choice;
+
+
+        if (choice == 'y' || choice == 'Y')
+        {
+            // Insert the new venue
+            // Assume the user provides the necessary information for the new venue
+            // For simplicity, let's assume the user provides all required fields
+            string ven_name, ven_location;
+            int capacity;
+            cout << "Venue Name: ";
+            cin.ignore(); // Clear the input buffer
+            getline(cin, ven_name);
+            cout << "Venue Location: ";
+            getline(cin, ven_location);
+            cout << "Capacity: ";
+            cin >> capacity;
+
+
+            prep_stmt = con->prepareStatement("INSERT INTO Venues (homeven_id, ven_name, venLo, capacity, artistID) VALUES (?, ?, ?, ?, ?)");
+            prep_stmt->setInt(1, homeven_id);
+            prep_stmt->setString(2, ven_name);
+            prep_stmt->setString(3, ven_location);
+            prep_stmt->setInt(4, capacity);
+            prep_stmt->setInt(5, 0); // Set artistID to 0 as we're not associating with any artist initially
+
+
+            prep_stmt->execute();
+        }
+        else
+        {
+            cout << "Insertion canceled." << endl;
+            return;
+        }
+    }
+
+
+    prep_stmt = con->prepareStatement("INSERT INTO Artists (artistID, stage_name, real_name, age, genre, hometown, rclabel_id, homeven_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    prep_stmt->setString(1, artistID);
+    prep_stmt->setString(2, stage_name);
+    prep_stmt->setString(3, real_name);
+    prep_stmt->setString(4, age);
+    prep_stmt->setString(5, genre);
+    prep_stmt->setString(6, hometown);
+    prep_stmt->setInt(7, rclabel_id);
+    prep_stmt->setInt(8, homeven_id);
+
+
+    prep_stmt->execute();
+}
+
+
+
+
+
+
+void findbygenre()
+{
+    string genre;
+
+
+    cout << "Enter the genre: ";
+    cin >> genre;
+
+
+    prep_stmt = con->prepareStatement("SELECT * FROM Artists WHERE genre = ?");
+    prep_stmt->setString(1, genre);
+    res = prep_stmt->executeQuery();
+
+
+    while (res->next())
+    {
+        cout << res->getInt("artistID") << " ";
+        cout << res->getString("stage_name") << " ";
+        cout << res->getString("real_name") << " ";
+        cout << res->getString("age") << " ";
+        cout << res->getString("genre") << " ";
+        cout << res->getString("hometown") << " ";
+        cout << res->getInt("rclabel_id") << " ";
+        cout << res->getInt("homeven_id") << endl;
+    }
+}
+
+
+void deleteArtist()
+{
+    int id;
+
+
+    cout << "Enter the ID of the artist you want to delete: ";
+    cin >> id;
+
+
+    prep_stmt = con->prepareStatement("DELETE FROM Artists WHERE artistID = ?");
+    prep_stmt->setInt(1, id);
+    prep_stmt->execute();
+    cout << "Artist deleted successfully." << endl;
+}
+
+
+void updateArtist()
+{
+    int id;
+    string column, newValue;
+
+
+    cout << "Enter the ID of the artist you want to update: ";
+    cin >> id;
+    cout << "Enter the column you want to update (stage_name, real_name, age, genre, hometown, rclabel_id, homeven_id): ";
+    cin >> column;
+    cout << "Enter the new value: ";
+    cin >> newValue;
+
+
+    prep_stmt = con->prepareStatement("UPDATE Artists SET " + column + " = ? WHERE artistID = ?");
+    prep_stmt->setString(1, newValue);
+    prep_stmt->setInt(2, id);
+    prep_stmt->execute();
+    cout << "Artist information updated successfully." << endl;
+}
+
+
+void createViewAverageAge()
+{
+    try
+    {
+        stmt = con->createStatement();
+        stmt->execute("CREATE OR REPLACE VIEW View_AverageAge AS SELECT genre, AVG(age) as AverageAge FROM Artists GROUP BY genre");
+
+
+        // Output the information to the terminal
+        res = stmt->executeQuery("SELECT * FROM View_AverageAge");
+        cout << "View for Average Age by Genre created successfully." << endl;
+        cout << "Genre\t\t| Average Age" << endl;
+        while (res->next())
+        {
+            cout << res->getString("genre") << "\t| ";
+            cout << res->getString("AverageAge") << endl;
+        }
+    }
+    catch (sql::SQLException &e)
+    {
+        cout << "# ERR: SQLException in " << __FILE__;
+        cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
+        cout << "# ERR: " << e.what();
+        cout << " (MySQL error code: " << e.getErrorCode();
+        cout << ", SQLState: " << e.getSQLState() << " )" << endl;
+    }
+}
+
+
+void countArtistsYoungerThan50()
+{
+    try
+    {
+        stmt = con->createStatement();
+        res = stmt->executeQuery("SELECT COUNT(*) AS younger_than_50 FROM Artists WHERE age < 50");
+
+
+        if (res->next())
+        {
+            cout << "Number of Artists Younger Than Age 50: " << res->getInt("younger_than_50") << endl;
+        }
+    }
+    catch (sql::SQLException &e)
+    {
+        cout << "# ERR: SQLException in " << __FILE__;
+        cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
+        cout << "# ERR: " << e.what();
+        cout << " (MySQL error code: " << e.getErrorCode();
+        cout << ", SQLState: " << e.getSQLState() << " )" << endl;
+    }
+}
