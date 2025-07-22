@@ -1,441 +1,175 @@
-#include <stdlib.h>
-#include <iostream>
-#include <mysql_connection.h>
-#include <cppconn/driver.h>
-#include <cppconn/exception.h>
-#include <cppconn/resultset.h>
-#include <cppconn/statement.h>
-#include <cppconn/prepared_statement.h>
-
-
-using namespace std;
-
-
-sql::Driver *driver;
-sql::Connection *con;
-sql::Statement *stmt;
-sql::ResultSet *res;
-sql::PreparedStatement *prep_stmt;
-
-
-void findall();
-void findbyid();
-void insert();
-void findbygenre();
-void deleteArtist();
-void updateArtist();
-void createViewAverageAge();
-void countArtistsYoungerThan50();
-
-
-int main(void)
-{
-    try
-    {
-        /* Create a connection */
-        driver = get_driver_instance();
-        con = driver->connect("tcp://127.0.0.1:3306", "root", "");
-
-
-        /* Connect to the MySQL musicians database */
-        con->setSchema("musicians");
-
-
-        int option = 0;
-
-
-        while (option != 9)
-        {
-            cout << endl;
-            cout << "1. Add a musician" << endl;
-            cout << "2. Find a musician by id" << endl;
-            cout << "3. Find a musician by genre" << endl;
-            cout << "4. Show all musicians" << endl;
-            cout << "5. Delete a musician" << endl;
-            cout << "6. Update artist information" << endl;
-            cout << "7. Create view for average age" << endl;
-            cout << "8. Create view for Count for artists" << endl;
-            cout << "9. Exit" << endl
-                 << endl;
-
-
-            cout << "Choice : ";
-            cin >> option;
-
-
-            switch (option)
-            {
-            case 1:
-                insert();
-                break;
-
-
-            case 2:
-                findbyid();
-                break;
-
-
-            case 3:
-                findbygenre();
-                break;
-
-
-            case 4:
-                findall();
-                break;
-
-
-            case 5:
-                deleteArtist();
-                break;
-
-
-            case 6:
-                updateArtist();
-                break;
-
-
-            case 7:
-                createViewAverageAge();
-                break;
-
-
-            case 8:
-                countArtistsYoungerThan50();
-                break;
-
-
-            case 9:
-                break;
-            }
-        }
-
-
-        delete res;
-        delete stmt;
-        delete con;
-    }
-    catch (sql::SQLException &e)
-    {
-        cout << "# ERR: SQLException in " << __FILE__;
-        cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
-        cout << "# ERR: " << e.what();
-        cout << " (MySQL error code: " << e.getErrorCode();
-        cout << ", SQLState: " << e.getSQLState() << " )" << endl;
-    }
-    cout << endl;
-    return EXIT_SUCCESS;
-}
-
-
-void findall()
-{
-    stmt = con->createStatement();
-    res = stmt->executeQuery("SELECT * FROM Artists");
-
-
-    while (res->next())
-    {
-        cout << res->getInt("artistID") << " ";
-        cout << res->getString("stage_name") << " ";
-        cout << res->getString("real_name") << " ";
-        cout << res->getString("age") << " ";
-        cout << res->getString("genre") << " ";
-        cout << res->getString("hometown") << " ";
-        cout << res->getInt("rclabel_id") << " ";
-        cout << res->getInt("homeven_id") << endl;
-    }
-}
-
-
-void findbyid()
-{
-    int id;
-
-
-    cout << "Enter the artist ID: ";
-    cin >> id;
-
-
-    prep_stmt = con->prepareStatement("SELECT * FROM Artists WHERE artistID = ?");
-    prep_stmt->setInt(1, id);
-    res = prep_stmt->executeQuery();
-
-
-    while (res->next())
-    {
-        cout << res->getInt("artistID") << " ";
-        cout << res->getString("stage_name") << " ";
-        cout << res->getString("real_name") << " ";
-        cout << res->getString("age") << " ";
-        cout << res->getString("genre") << " ";
-        cout << res->getString("hometown") << " ";
-        cout << res->getInt("rclabel_id") << " ";
-        cout << res->getInt("homeven_id") << endl;
-    }
-}
-
-
-void insert()
-{
-    string artistID, stage_name, real_name, age, genre, hometown;
-    int rclabel_id, homeven_id;
-
-
-    cout << "Artist ID: ";
-    cin >> artistID;
-    cout << "Stage Name: ";
-    cin >> stage_name;
-    cout << "Real Name: ";
-    cin >> real_name;
-    cout << "Age: ";
-    cin >> age;
-    cout << "Genre: ";
-    cin >> genre;
-    cout << "Hometown: ";
-    cin >> hometown;
-    cout << "Record Label ID: ";
-    cin >> rclabel_id;
-
-
-    // Check if the provided rclabel_id exists in the Record_Label table
-    prep_stmt = con->prepareStatement("SELECT COUNT(*) FROM Record_Label WHERE rclabel_id = ?");
-    prep_stmt->setInt(1, rclabel_id);
-    res = prep_stmt->executeQuery();
-    res->next();
-    int labelCount = res->getInt(1);
-
-
-    if (labelCount == 0)
-    {
-        cout << "Record Label ID does not exist in the Record_Label table. Do you want to add it? (y/n): ";
-        char choice;
-        cin >> choice;
-
-
-        if (choice == 'y' || choice == 'Y')
-        {
-            // Insert the new record label
-            // Assume the user provides the necessary information for the new record label
-            // For simplicity, let's assume the user provides all required fields
-            string rclabel_name, founder_name, located;
-            int founded_year;
-            cout << "Record Label Name: ";
-            cin.ignore(); // Clear the input buffer
-            getline(cin, rclabel_name);
-            cout << "Founder Name: ";
-            getline(cin, founder_name);
-            cout << "Founded Year: ";
-            cin >> founded_year;
-            cout << "Located: ";
-            cin.ignore(); // Clear the input buffer
-            getline(cin, located);
-
-
-            prep_stmt = con->prepareStatement("INSERT INTO Record_Label (rclabel_id, rclabel, founder, founded, located) VALUES (?, ?, ?, ?, ?)");
-            prep_stmt->setInt(1, rclabel_id);
-            prep_stmt->setString(2, rclabel_name);
-            prep_stmt->setString(3, founder_name);
-            prep_stmt->setInt(4, founded_year);
-            prep_stmt->setString(5, located);
-
-
-            prep_stmt->execute();
-        }
-        else
-        {
-            cout << "Insertion canceled." << endl;
-            return;
-        }
-    }
-
-
-    cout << "Venue ID: ";
-    cin >> homeven_id;
-
-
-    // Check if the provided homeven_id exists in the Venues table
-    prep_stmt = con->prepareStatement("SELECT COUNT(*) FROM Venues WHERE homeven_id = ?");
-    prep_stmt->setInt(1, homeven_id);
-    res = prep_stmt->executeQuery();
-    res->next();
-    int venueCount = res->getInt(1);
-
-
-    if (venueCount == 0)
-    {
-        cout << "Venue ID does not exist in the Venues table. Do you want to add it? (y/n): ";
-        char choice;
-        cin >> choice;
-
-
-        if (choice == 'y' || choice == 'Y')
-        {
-            // Insert the new venue
-            // Assume the user provides the necessary information for the new venue
-            // For simplicity, let's assume the user provides all required fields
-            string ven_name, ven_location;
-            int capacity;
-            cout << "Venue Name: ";
-            cin.ignore(); // Clear the input buffer
-            getline(cin, ven_name);
-            cout << "Venue Location: ";
-            getline(cin, ven_location);
-            cout << "Capacity: ";
-            cin >> capacity;
-
-
-            prep_stmt = con->prepareStatement("INSERT INTO Venues (homeven_id, ven_name, venLo, capacity, artistID) VALUES (?, ?, ?, ?, ?)");
-            prep_stmt->setInt(1, homeven_id);
-            prep_stmt->setString(2, ven_name);
-            prep_stmt->setString(3, ven_location);
-            prep_stmt->setInt(4, capacity);
-            prep_stmt->setInt(5, 0); // Set artistID to 0 as we're not associating with any artist initially
-
-
-            prep_stmt->execute();
-        }
-        else
-        {
-            cout << "Insertion canceled." << endl;
-            return;
-        }
-    }
-
-
-    prep_stmt = con->prepareStatement("INSERT INTO Artists (artistID, stage_name, real_name, age, genre, hometown, rclabel_id, homeven_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    prep_stmt->setString(1, artistID);
-    prep_stmt->setString(2, stage_name);
-    prep_stmt->setString(3, real_name);
-    prep_stmt->setString(4, age);
-    prep_stmt->setString(5, genre);
-    prep_stmt->setString(6, hometown);
-    prep_stmt->setInt(7, rclabel_id);
-    prep_stmt->setInt(8, homeven_id);
-
-
-    prep_stmt->execute();
-}
-
-
-
-
-
-
-void findbygenre()
-{
-    string genre;
-
-
-    cout << "Enter the genre: ";
-    cin >> genre;
-
-
-    prep_stmt = con->prepareStatement("SELECT * FROM Artists WHERE genre = ?");
-    prep_stmt->setString(1, genre);
-    res = prep_stmt->executeQuery();
-
-
-    while (res->next())
-    {
-        cout << res->getInt("artistID") << " ";
-        cout << res->getString("stage_name") << " ";
-        cout << res->getString("real_name") << " ";
-        cout << res->getString("age") << " ";
-        cout << res->getString("genre") << " ";
-        cout << res->getString("hometown") << " ";
-        cout << res->getInt("rclabel_id") << " ";
-        cout << res->getInt("homeven_id") << endl;
-    }
-}
-
-
-void deleteArtist()
-{
-    int id;
-
-
-    cout << "Enter the ID of the artist you want to delete: ";
-    cin >> id;
-
-
-    prep_stmt = con->prepareStatement("DELETE FROM Artists WHERE artistID = ?");
-    prep_stmt->setInt(1, id);
-    prep_stmt->execute();
-    cout << "Artist deleted successfully." << endl;
-}
-
-
-void updateArtist()
-{
-    int id;
-    string column, newValue;
-
-
-    cout << "Enter the ID of the artist you want to update: ";
-    cin >> id;
-    cout << "Enter the column you want to update (stage_name, real_name, age, genre, hometown, rclabel_id, homeven_id): ";
-    cin >> column;
-    cout << "Enter the new value: ";
-    cin >> newValue;
-
-
-    prep_stmt = con->prepareStatement("UPDATE Artists SET " + column + " = ? WHERE artistID = ?");
-    prep_stmt->setString(1, newValue);
-    prep_stmt->setInt(2, id);
-    prep_stmt->execute();
-    cout << "Artist information updated successfully." << endl;
-}
-
-
-void createViewAverageAge()
-{
-    try
-    {
-        stmt = con->createStatement();
-        stmt->execute("CREATE OR REPLACE VIEW View_AverageAge AS SELECT genre, AVG(age) as AverageAge FROM Artists GROUP BY genre");
-
-
-        // Output the information to the terminal
-        res = stmt->executeQuery("SELECT * FROM View_AverageAge");
-        cout << "View for Average Age by Genre created successfully." << endl;
-        cout << "Genre\t\t| Average Age" << endl;
-        while (res->next())
-        {
-            cout << res->getString("genre") << "\t| ";
-            cout << res->getString("AverageAge") << endl;
-        }
-    }
-    catch (sql::SQLException &e)
-    {
-        cout << "# ERR: SQLException in " << __FILE__;
-        cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
-        cout << "# ERR: " << e.what();
-        cout << " (MySQL error code: " << e.getErrorCode();
-        cout << ", SQLState: " << e.getSQLState() << " )" << endl;
-    }
-}
-
-
-void countArtistsYoungerThan50()
-{
-    try
-    {
-        stmt = con->createStatement();
-        res = stmt->executeQuery("SELECT COUNT(*) AS younger_than_50 FROM Artists WHERE age < 50");
-
-
-        if (res->next())
-        {
-            cout << "Number of Artists Younger Than Age 50: " << res->getInt("younger_than_50") << endl;
-        }
-    }
-    catch (sql::SQLException &e)
-    {
-        cout << "# ERR: SQLException in " << __FILE__;
-        cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
-        cout << "# ERR: " << e.what();
-        cout << " (MySQL error code: " << e.getErrorCode();
-        cout << ", SQLState: " << e.getSQLState() << " )" << endl;
-    }
-}
+-- MUSICIANS DATABASE --
+DROP DATABASE IF EXISTS musicians;
+CREATE DATABASE musicians;
+USE musicians;
+
+// CREATE OR REPLACE VIEW View_Totals AS SELECT COUNT(DISTINCT home_ven_id) as TotalVenues, SUM(album_sales) as TotalAlbumSales FROM Artists JOIN SalesNStreaming ON Artists.artistID = SalesNStreaming.artistID
+
+CREATE TABLE Artists (
+artistID INT NOT NULL,
+stage_name VARCHAR(20) NULL,
+real_name VARCHAR(50) NOT NULL,
+age VARCHAR(10) NOT NULL,
+genre VARCHAR(20) NOT NULL,
+hometown VARCHAR(50) NOT NULL,
+rclabel_id INT NOT NULL,
+homeven_id INT NOT NULL,
+PRIMARY KEY (artistID)
+-- FOREIGN KEY (rclabel_id) REFERENCES Record_Label(rclabel_id) --
+-- FOREIGN KEY (homeven_id) REFERENCES Venues(homeven_id) --
+);
+
+INSERT INTO Artists (artistID, stage_name, real_name, age, genre, hometown, rclabel_id, homeven_id)
+VALUES
+(1,'Beyonce', 'Beyonce Knowles-Carter', '42', 'R&B/Soul', 'Houston, Texas', 9, 17),
+(2, 'Taylor Swift', 'Taylor Swift', '34', 'Pop', 'West Reading, Pennsylvania', 10, 18),
+(3, 'Drake', 'Aubrey Graham', '37', 'Hip Hop/Rap', 'Toronto, Ontario', 11, 19),
+(4, 'Jay-Z', 'Shawn Carter', '54', 'Hip Hop/Rap', 'Brooklyn, New York', 12, 20),
+(5,'Kirk Franklin', 'Kirk Franklin', '54', 'Gospel', 'Fort Worth, Texas', 13, 21),
+(6, 'Carrie Underwood', 'Carrie Underwood', '41', 'Country', 'Muskogee, Oklahoma', 14, 22),
+(7, 'Dolly Parton', 'Dolly Parton', '78', 'Country', 'Locust Ridge, Tennessee', 15, 23),
+(8, 'Jimi Hendrix', 'James Hendrix', '27', 'Rock', 'Seattle, Washingston', 16, 24);
+
+
+CREATE TABLE Venues (
+homeven_id INT NOT NULL,
+ven_name VARCHAR(50) NOT NULL,
+venLo VARCHAR(50) NOT NULL,
+capacity INT NOT NULL,
+artistID INT NOT NULL,
+PRIMARY KEY (homeven_id),
+FOREIGN KEY (artistID) REFERENCES Artists(artistID)
+-- select Artists.stage_name, Artists.genre, Venues.ven_name, --
+-- Venues.venLo from Artists join Venues on Artists.artistID=Venues.artistID --
+);
+
+INSERT INTO Venues (homeven_id, ven_name, venLo, capacity, artistID)
+VALUES
+(17, 'Toyota Center', 'Houston, Texas', 19000, 1),
+(18, 'Wells Fargo Center', 'Philadelphia, Pennsylvania', 21000, 2),
+(19, 'Scotiabank Arena', 'Toronto, Ontario', 19800, 3),
+(20, 'Madison Square Garden', 'New York City, New York', 19500, 4),
+(21,'American Airlines Center', 'Dallas, Texas', 20000, 5),
+(22, 'Paycom Center', 'Oklahoma City, Oklahoma', 18203, 6),
+(23, 'FedExForum', 'Memphis, Tennessee', 19000, 7),
+(24, 'Capital One Arena', 'Washington, D.C.', 20356, 8);
+
+
+CREATE TABLE Record_Label (
+artistID INT NOT NULL,
+rclabel_id INT NOT NULL,
+rclabel VARCHAR(50) NOT NULL,
+founder VARCHAR(50) NOT NULL,
+founded INT NOT NULL,
+located VARCHAR(50) NOT NULL,
+PRIMARY KEY (rclabel_id),
+FOREIGN KEY (artistID) REFERENCES Artists(artistID)
+);
+
+INSERT INTO Record_Label (artistID, rclabel_id, rclabel, founder, founded, located)
+VALUES
+(1, 9, 'Parkwood Entertainment', 'Beyonce Knowles-Carter', 2010, 'Los Angeles, California'),
+(2, 10, 'Universal Music Group', 'Carl Laemmle', 1934, 'Santa Monica, California'),
+(3, 11, 'OVO Sound', 'Aubrey “Drake” Graham', 2012, 'Toronto, Ontario, Canada'),
+(4, 12, 'Roc Nation', 'Shawn "Jay-Z" Carter', 2008, 'New York, New York'),
+(5, 13, 'RCA Inspiration', 'Sony Music Entertainment', 1994, 'Nashville, Tennessee'),
+(6, 14, 'Universal Music Group Nashville', 'Paul Cohen', 1945, 'Nashville, Tennessee'),
+(7, 15, 'Dolly Records', 'Dolly Parton', 2007, 'Nashville, Tennessee'),
+(8, 16, 'Capitol Records', 'Johnny Mercer and Buddy DeSylva', 1942, 'Los Angeles, California');
+
+
+CREATE TABLE SalesNStreaming (
+salesid INT NOT NULL,
+artistID INT NOT NULL,
+yt_views VARCHAR(50) NOT NULL,
+spotify_montlist VARCHAR(50) NOT NULL,
+album_sales VARCHAR(50) NOT NULL,
+singles_sales VARCHAR(50) NOT NULL,
+PRIMARY KEY (salesid),
+FOREIGN KEY (artistID) REFERENCES Artists(artistID)
+);
+
+INSERT INTO SalesNStreaming VALUES (25, 1, '18,573,224,481', '77,764,066', 'Dangerously in Love: 6,000,000', 'Halo: 1,528,286,611');
+INSERT INTO SalesNStreaming VALUES (26, 2, '34,038,258,988', '104,842,592', '1989: 14,332,116', 'Cruel Summer: 2,030,461,473');
+INSERT INTO SalesNStreaming VALUES (27, 3, '17,341,814,841', '80,743,938', 'Views: 7,687,247', 'One Dance: 3,110,814,593');
+INSERT INTO SalesNStreaming VALUES (28, 4, '2,202,487,738', '36,798,002', 'Vol. 2... Hard Knock Life: 6,200,000', 'Ni**as In Paris: 1,404,304,923');
+INSERT INTO SalesNStreaming VALUES (29, 5, '926,447,881', '2,383,920', "God's Property: 3,000,000", 'TOGETHER: 55,184,801');
+INSERT INTO SalesNStreaming VALUES (30, 6, '1,887,578,657', '9,711,314', 'Some Hearts: 7,000,000', 'Before He Cheats: 585,403,567');
+INSERT INTO SalesNStreaming VALUES (31, 7, '673,462,204', '23,394,219', 'Rockstar: 127,778', '9 to 5: 581,430,799');
+INSERT INTO SalesNStreaming VALUES (32, 8, '708,512,189', '8,517,500', 'Electric Ladyland: 7,700,000', 'All Along the Watchtower: 693,050,994');
+
+
+CREATE TABLE Awards (
+awardID INT NOT NULL,
+artistID INT NOT NULL,
+Grammys INT NOT NULL,
+MTV INT NOT NULL,
+American INT NOT NULL,
+Billboard INT NOT NULL,
+IHeartRadio INT NOT NULL,
+PRIMARY KEY (awardID),
+FOREIGN KEY (artistID) REFERENCES Artists(artistID)
+);
+
+INSERT INTO Awards VALUES (33, 1, 32, 29, 12, 16, 3);
+INSERT INTO Awards VALUES (34, 2, 14, 23, 40, 39, 24);
+INSERT INTO Awards VALUES (35, 3, 5, 3, 7, 39, 17);
+INSERT INTO Awards VALUES (36, 4, 24, 12, 4, 6, 0);
+INSERT INTO Awards VALUES (37, 5, 19, 0, 1, 5, 0);
+INSERT INTO Awards VALUES (38, 6, 8, 0, 17, 12, 1);
+INSERT INTO Awards VALUES (39, 7, 12, 0, 3, 0, 0);
+INSERT INTO Awards VALUES (40, 8, 0, 0, 0, 0, 0);
+
+
+CREATE TABLE Discography (
+discID INT NOT NULL,
+artistID INT NOT NULL,
+Albums INT NOT NULL,
+Singles INT NOT NULL,
+EPs INT NOT NULL,
+Debut_Album VARCHAR(100) NOT NULL,
+PRIMARY KEY (discID),
+FOREIGN KEY (artistID) REFERENCES Artists(artistID)
+);
+
+INSERT INTO Discography VALUES (41, 1, 9, 80, 5, 'Dangerously In Love (2003)');
+INSERT INTO Discography VALUES (42, 2, 10, 103, 5, 'Taylor Swift (2006)');
+INSERT INTO Discography VALUES (43, 3, 8, 38, 1, 'Thank Me Later (2010)');
+INSERT INTO Discography VALUES (44, 4, 13, 115, 2, 'Reasonable Doubt (1996)');
+INSERT INTO Discography VALUES (45, 5, 17, 20, 0, 'Kirk Franklin & The Family (1993)');
+INSERT INTO Discography VALUES (46, 6, 9, 29, 0, 'Some Hearts (2005)');
+INSERT INTO Discography VALUES (47, 7, 65, 243, 1, "Hello, I'm Dolly (1967)");
+INSERT INTO Discography VALUES (48, 8, 3, 24, 0, 'Are You Experienced (1967)');
+
+
+CREATE TABLE Tours (
+tour_id INT NOT NULL,
+artistID INT NOT NULL,
+tour_name VARCHAR(50) NOT NULL,
+year VARCHAR(50) NOT NULL,
+num_cities VARCHAR(50) NOT NULL,
+shows_comp VARCHAR(50) NOT NULL,
+shows_total VARCHAR(50) NOT NULL,
+PRIMARY KEY (tour_id),
+FOREIGN KEY (artistID) REFERENCES Artists(artistID)
+);
+
+INSERT INTO Tours VALUES (49, 1, 'Renaissance World Tour', 'May 10, 2023 - Sep 27, 2023', 39, 56, 56);
+INSERT INTO Tours VALUES (50, 2, 'The Eras Tour', 'Mar 17, 2023 - Dec 8, 2024', 54, 86, 152);
+INSERT INTO Tours VALUES (51, 3, 'Summer Sixteen Tour', 'July 20, 2016 - September 18, 2016', 30, 54, 54);
+INSERT INTO Tours VALUES (52, 4, '4:44', 'Shawn Carter', 'Oct 27, 2017 - Dec 21, 2017', 31, 33, 33);
+INSERT INTO Tours VALUES (53, 5, 'Kingdom Tour', 'June 7, 2022 - August 7, 2022', 37, 34, 34);
+INSERT INTO Tours VALUES (54, 6, 'Storyteller Tour', 'Jan 30, 2016 - Nov 28, 2016', 86, 92, 92);
+INSERT INTO Tours VALUES (55, 7, 'Better Day World Tour', 'Jul 17, 2011 - Dec 1, 2011', 45, 50, 50);
+INSERT INTO Tours VALUES (56, 8, 'Cry of Love', 'Apr 25, 1970 - Sep 6, 1970', 44, 37, 37);
+
+-- Adding the foreign keys to the table --
+ALTER TABLE Artists
+ADD FOREIGN KEY (rclabel_id) REFERENCES Record_Label(rclabel_id);
+
+ALTER TABLE Artists
+ADD FOREIGN KEY (homeven_id) REFERENCES Venues(homeven_id);
+
+
+-- Changing the names of the columns --
+-- ALTER TABLE Artists RENAME COLUMN stage_name to StageName; --
